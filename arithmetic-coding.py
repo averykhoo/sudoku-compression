@@ -230,7 +230,7 @@ if __name__ == '__main__':
 
     square_1 = (1, 2, 3, 4, 5, 6, 7, 8, 9)
     square_2s = all_possible_squares(constraint_squares_left=[square_1])
-    square_4s = all_possible_squares(constraint_squares_left=[square_1])
+    square_4s = all_possible_squares(constraint_squares_above=[square_1])
 
     # c2 = Counter()
     c3 = Counter()
