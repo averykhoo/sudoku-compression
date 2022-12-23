@@ -313,7 +313,7 @@ def solve_sudoku(sudoku_string):
     # get data
     sudoku = Sudoku(sudoku_string)
     # print('INITIAL')
-    print(sudoku)
+    # print(sudoku)
     sudoku_csp = sudoku.make_csp()
     # print( 'CSP DOMAINS', sudoku_csp.domains)
 
@@ -326,7 +326,7 @@ def solve_sudoku(sudoku_string):
 
     # print(
     # print('SOLUTION', solution)
-    print(Sudoku(solution))
+    # print(Sudoku(solution))
     # print('TIME (seconds):', t)
     # print('ASSIGNMENTS (tries):', assign_count)
 
