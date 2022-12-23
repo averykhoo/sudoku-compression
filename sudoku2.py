@@ -105,7 +105,7 @@ inputs = """
 
 def print_sudoku(m):
     for k in m:
-        print' '.join(str(i) for i in k)
+        print(' '.join(str(i) for i in k))
 
 
 def potential_squares(u1, u2, u3, l1, l2, l3):
@@ -120,7 +120,7 @@ def potential_squares(u1, u2, u3, l1, l2, l3):
 
     if no items exist the empty list must be given
     """
-    for a, b, c, d, e, f, g, h, i in itertools.permutations(xrange(1, 10)):
+    for a, b, c, d, e, f, g, h, i in itertools.permutations(range(1, 10)):
         if a not in u1 and a not in l1 and b not in u2 and b not in l1 and c not in u3 and c not in l1 and d not in u1 and d not in l2 and e not in u2 and e not in l2 and f not in u3 and f not in l2 and g not in u1 and g not in l3 and h not in u2 and h not in l3 and i not in u3 and i not in l3:
             yield (a, b, c, d, e, f, g, h, i)
 
@@ -144,15 +144,15 @@ def board_to_squares(board):
     g h i
     """
     labels = [[3 * i + 1] * 3 + [3 * i + 2] * 3 + [3 * i + 3] * 3 for i in [0, 0, 0, 1, 1, 1, 2, 2, 2]]
-    labelled_board = zip(sum(board, []), sum(labels, []))
-    return [tuple(a for a, b in labelled_board if b == sq) for sq in xrange(1, 10)]
+    labelled_board = list(zip(sum(board, []), sum(labels, [])))
+    return [tuple(a for a, b in labelled_board if b == sq) for sq in range(1, 10)]
 
 
 def squares_to_board(squares):
     """
     inverse of above
     """
-    board = [[i / 3 * 27 + i % 3 * 3 + j / 3 * 9 + j % 3 for j in range(9)] for i in range(9)]
+    board = [[i // 3 * 27 + i % 3 * 3 + j // 3 * 9 + j % 3 for j in range(9)] for i in range(9)]
     flattened = sum([list(square) for square in squares], [])
     for i in range(9):
         for j in range(9):
@@ -209,11 +209,11 @@ def sum_cols(*squares):
 
 
 def base95(A):
-    if type(A) is int or type(A) is long:
+    if type(A) is int:
         s = ''
         while A > 0:
             s += chr(32 + A % 95)
-            A /= 95
+            A //= 95
         return s
     if type(A) is str:
         return sum((ord(c) - 32) * (95 ** i) for i, c in enumerate(A))
@@ -253,7 +253,7 @@ def factorize_sudoku(board):
     squares = board_to_squares(board)
     factors = []
 
-    for label in xrange(1, 10):
+    for label in range(1, 10):
         above, left = dependencies[label]
         u1, u2, u3 = sum_cols(*[sq for i, sq in enumerate(squares) if i + 1 in above])
         l1, l2, l3 = sum_rows(*[sq for i, sq in enumerate(squares) if i + 1 in left])
@@ -266,7 +266,7 @@ def factorize_sudoku(board):
 
 def unfactorize_sudoku(factors):
     squares = []
-    for label in xrange(1, 10):
+    for label in range(1, 10):
         factor = factors[label - 1]
         above, left = dependencies[label]
         u1, u2, u3 = sum_cols(*[sq for i, sq in enumerate(squares) if i + 1 in above])
@@ -298,14 +298,14 @@ for sudoku in inputs:
         i += item
 
     sudoku_strings.append(base95(i))
-    print 'integral representation:', i
-    print 'bits of entropy:', i.bit_length()
-    print 'base95 representation:', sudoku_strings[-1]
-    print ''
+    print('integral representation:', i)
+    print('bits of entropy:', i.bit_length())
+    print('base95 representation:', sudoku_strings[-1])
+    print()
 
-print 'overall output:', sudoku_strings
-print 'total length:', len(''.join(sudoku_strings))
-print ''
+print('overall output:', sudoku_strings)
+print('total length:', len(''.join(sudoku_strings)))
+print()
 
 
 #
@@ -316,14 +316,14 @@ print ''
 
 
 for sudoku_string in sudoku_strings:
-    print 'from:', sudoku_string
+    print('from:', sudoku_string)
 
     i = base95(sudoku_string)
     retrieved = []
     for base in possibilities[::-1]:
         retrieved.append(i % base)
-        i /= base
+        i //= base
 
     squares = unfactorize_sudoku(retrieved[::-1])
     print_sudoku(squares_to_board(squares))
-    print ''
+    print()
