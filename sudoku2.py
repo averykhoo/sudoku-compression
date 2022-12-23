@@ -239,14 +239,14 @@ max possible options for a given element
   3 2 1   ? ? ?   3 2 1
 
   ? ? ?   ? ? ?   2 2 1
- (12096)  (420)   2 1 1    (limits for squares 2,4 determined experimentally)
-  ? ? ?   ? ? ?   1 1 1    (limit for square 5 is a pessimistic guess, might be wrong)
+ (12096)  (448)   2 1 1    (limits for squares 2,4 determined via brute-force enumeration)
+  ? ? ?   ? ? ?   1 1 1    (limit for square 5 determined via sampled enumeration)
 
   3 3 3   2 2 1   1 1 1
   2 2 2   2 1 1   1 1 1
   1 1 1   1 1 1   1 1 1
 """
-possibilities = [362880, 12096, 216, 12096, 420, 8, 216, 8, 1]
+possibilities = [362880, 12096, 216, 12096, 448, 8, 216, 8, 1]
 
 
 def factorize_sudoku(board):
