@@ -412,6 +412,9 @@ if __name__ == '__main__':
     SOLVED PUZZLE (CHECK FOR WEIRD ERRORS)
         483921657967345821251876493548132976729564138136798245372689514814253769695417382
     
+    SOLVED WRONG PUZZLE (CHECK FOR WEIRD ERRORS)
+        483921657967345821251876493548132976729564138136798245372689514814253769695417328
+    
     BADLY POSED PUZZLE
         483921657...............................................................695417382
     
@@ -443,8 +446,11 @@ if __name__ == '__main__':
         . 3 8 . . . 4 6 .
     
     
-    """.strip().split('\n\n')
+    """.strip().split('\n    \n')
 
     for index, sudoku_data in enumerate(inputs):
-        print('TEST CASE', index + 1, repr(sudoku_data))
-        solve_sudoku(sudoku_data)
+        print('TEST CASE', index + 1, repr(sudoku_data.split('\n')[0].strip()))
+        try:
+            print(solve_sudoku(sudoku_data))
+        except AssertionError:
+            print('unsolvable')
