@@ -1,14 +1,16 @@
 import itertools
 import math
-import random
 import re
-from collections import Counter
+import time
 from functools import lru_cache
 from typing import Iterable
 from typing import List
 from typing import Sequence
 from typing import Set
 from typing import Tuple
+
+from another_solver import Solver
+from sudoku_csp_solver import solve_sudoku
 
 # represents a 3x3 grid square, in this order:
 # 1 2 3
@@ -111,6 +113,21 @@ def board_to_squares(board: str) -> List[Square]:
     return [tuple(square) for square in out]
 
 
+def squares_to_board(*squares: Square) -> str:
+    """
+    inverse of above
+    """
+    board = [[i // 3 * 27 + i % 3 * 3 + j // 3 * 9 + j % 3 for j in range(9)] for i in range(9)]
+    squares = list(squares)
+    while len(squares) < 9:
+        squares.append('*' * 9)
+    flattened = [cell for square in squares for cell in square]
+    for i in range(9):
+        for j in range(9):
+            board[i][j] = flattened[board[i][j]]
+    return '\n'.join(' '.join(map(str, row)) for row in board)
+
+
 @lru_cache(maxsize=362880)
 def square_to_cols(square: Square) -> Tuple[Set[int], Set[int], Set[int]]:
     assert len(square) == 9
@@ -127,7 +144,7 @@ def square_to_rows(square: Square) -> Tuple[Set[int], Set[int], Set[int]]:
             {square[6], square[7], square[8]})
 
 
-def all_possible_squares(*,
+def _constrained_squares(*,
                          constraint_squares_above: Iterable[Square] = (),
                          constraint_squares_left: Iterable[Square] = (),
                          ) -> List[Square]:
@@ -180,111 +197,173 @@ def all_possible_squares(*,
     return out
 
 
-def squares_to_factors(squares: List[Square]) -> List[int]:
-    def get_factor(square, squares_above, squares_left):
-        for i, possibility in enumerate(all_possible_squares(constraint_squares_above=squares_above,
-                                                             constraint_squares_left=squares_left)):
-            if possibility == square:
-                return i
-
-    return [
-        get_factor(squares[0], [], []),
-        get_factor(squares[1], [], [squares[0]]),
-        get_factor(squares[2], [], [squares[0], squares[1]]),
-        get_factor(squares[3], [squares[0]], []),
-        get_factor(squares[4], [squares[1]], [squares[3]]),
-        get_factor(squares[5], [squares[2]], [squares[3], squares[4]]),
-        get_factor(squares[6], [squares[0], squares[3]], []),
-        get_factor(squares[7], [squares[1], squares[4]], [squares[6]]),
-        get_factor(squares[8], [squares[2], squares[5]], [squares[6], squares[7]]),
+def all_possible_squares(*previous_squares: Square) -> List[Square]:
+    print(previous_squares)
+    constraints = [
+        ([], []),
+        ([], [0]),
+        ([], [0, 1]),
+        ([0], []),
+        ([1], [3]),
+        ([2], [3, 4]),
+        ([0, 3], []),
+        ([1, 4], [6]),
+        ([2, 5], [6, 7]),
     ]
+    _above, _left = constraints[len(previous_squares)]
+    out = []
+    t = time.time()
+    possible_squares = _constrained_squares(constraint_squares_above=[previous_squares[i] for i in _above],
+                                            constraint_squares_left=[previous_squares[i] for i in _left])
+    if len(previous_squares) == 0:
+        return possible_squares
+
+    for i, possible_square in enumerate(possible_squares):
+
+        if (i + 1) % 100 == 0:
+            print(f'[{i + 1}/{len(possible_squares)}] {possible_square}')
+
+        if is_solvable(squares_to_board(*previous_squares, possible_square)):
+            out.append(possible_square)
+
+    print(time.time() - t)
+    return out
 
 
-def factors_to_number(factors: List[int]) -> int:
+def squares_to_factors(squares: List[Square]) -> List[Tuple[int, int]]:
+    def get_factor(square_id):
+        t = time.time()
+        _all_possible_squares = all_possible_squares(*squares[:square_id])
+        print(square_id)
+        for i, possible_square in enumerate(_all_possible_squares):
+            if possible_square == squares[square_id]:
+                print(time.time() - t)
+                print(f'{i=}')
+                print(f'{len(_all_possible_squares)=}')
+                return i, len(_all_possible_squares)
+
+    return [get_factor(i) for i in range(9)]
+
+
+def factors_to_number(factors: List[Tuple[int, int]]) -> int:
     assert len(factors) == 9
-    assert factors[-1] == 0
-    return sum(f * m for f, m in zip(factors[:-1], MAGIC_NUMBERS))
+    assert factors[-1][0] == 0
+    out = 0
+    for n, d in factors[::-1]:
+        out *= d
+        out += n
+    return out
+
+
+def is_solvable(board: str) -> bool:
+    try:
+        s = Solver(''.join(board))
+        for _ in s.genSolutions():
+            return True
+    except RecursionError:
+        pass
+
+    try:
+        solve_sudoku(''.join(board))
+        return True
+    except AssertionError:
+        pass
+
+    return False
 
 
 if __name__ == '__main__':
     board = '''
-    8 3 5 4 1 6 9 2 7
-    2 9 6 8 5 7 4 3 1
-    4 1 7 2 9 3 6 5 8
-    5 6 9 1 3 4 7 8 2
-    1 2 3 6 7 8 5 4 9
-    7 4 8 5 2 9 1 6 3
-    6 5 2 7 8 1 3 9 4
-    9 8 1 3 4 5 2 7 6
-    3 7 4 9 6 2 8 1 5
+    9 7 3 5 8 1 4 2 6
+    5 2 6 4 7 3 1 9 8
+    1 8 4 2 9 6 7 5 3
+    2 4 7 8 6 5 3 1 9
+    3 9 8 1 2 4 6 7 5
+    6 5 1 7 3 9 8 4 2
+    8 1 9 3 4 2 5 6 7
+    7 6 5 9 1 8 2 3 4
+    4 3 2 6 5 7 9 8 1
     '''
 
+    t = time.time()
+
     squares = board_to_squares(board)
-    print(squares)
+    print(f'{squares=}')
+
     factors = squares_to_factors(squares)
-    print(factors)
-    i = factors_to_number(factors)
-    print(i)
+    print(f'{factors=}')
 
-if __name__ == '__main__':
+    total_entropy = math.prod(d for n, d in factors)
+    print(f'{total_entropy=}, {math.log2(total_entropy)}')
 
-    square_1 = (1, 2, 3, 4, 5, 6, 7, 8, 9)
-    square_2s = all_possible_squares(constraint_squares_left=[square_1])
-    square_4s = all_possible_squares(constraint_squares_above=[square_1])
+    while factors[-1][0] == 0:
+        factors.pop(-1)
+    print(f'nonzero factors: {len(factors)}')
 
-    # c2 = Counter()
-    c3 = Counter()
-    # c4 = Counter()
-    c5 = Counter()
-    c6 = Counter()
-    c7 = Counter()
-    c8 = Counter()
-    c9 = Counter()
+    encoded = factors_to_number(factors)
+    print(f'{encoded=}, {math.log2(encoded)}')
 
-    # 1 2 3
-    # 4 5 6
-    # 7 8 9
-    for _ in range(100):
-        square_2 = random.choice(square_2s)
+    print(f'total seconds: {time.time() - t:0.2f}')
 
-        square_3s = all_possible_squares(constraint_squares_left=[square_1, square_2])
-        square_3 = random.choice(square_3s)
-        c3[len(square_3s)] += 1
-
-        square_4 = random.choice(square_4s)
-
-        square_5s = all_possible_squares(constraint_squares_above=[square_2],
-                                         constraint_squares_left=[square_4])
-        square_5 = random.choice(square_5s)
-        c5[len(square_5s)] += 1
-
-        square_6s = all_possible_squares(constraint_squares_above=[square_3],
-                                         constraint_squares_left=[square_4, square_5])
-        square_6 = random.choice(square_6s)
-        c6[len(square_6s)] += 1
-
-        square_7s = all_possible_squares(constraint_squares_above=[square_1, square_4])
-        square_7 = random.choice(square_7s)
-        c7[len(square_7s)] += 1
-
-        square_8s = all_possible_squares(constraint_squares_above=[square_2, square_5],
-                                         constraint_squares_left=[square_7])
-
-        n_8 = 0
-        for square_8 in square_8s:
-
-            square_9s = all_possible_squares(constraint_squares_above=[square_3, square_6],
-                                             constraint_squares_left=[square_7, square_8])
-            if square_9s:
-                n_8 += 1
-                assert len(square_9s) == 1
-
-    # print('c1', c1)
-    # print('c2', c2)
-    print('c3', c3)
-    # print('c4', c4)
-    print('c5', c5)
-    print('c6', c6)
-    print('c7', c7)
-    print('c8', c8)
-    print('c9', c9)
+# if __name__ == '__main__':
+#
+# square_1 = (1, 2, 3, 4, 5, 6, 7, 8, 9)
+# square_2s = all_possible_squares(constraint_squares_left=[square_1])
+# square_4s = all_possible_squares(constraint_squares_above=[square_1])
+#
+# # c2 = Counter()
+# c3 = Counter()
+# # c4 = Counter()
+# c5 = Counter()
+# c6 = Counter()
+# c7 = Counter()
+# c8 = Counter()
+# c9 = Counter()
+#
+# # 1 2 3
+# # 4 5 6
+# # 7 8 9
+# for _ in range(100):
+#     square_2 = random.choice(square_2s)
+#
+#     square_3s = all_possible_squares(constraint_squares_left=[square_1, square_2])
+#     square_3 = random.choice(square_3s)
+#     c3[len(square_3s)] += 1
+#
+#     square_4 = random.choice(square_4s)
+#
+#     square_5s = all_possible_squares(constraint_squares_above=[square_2],
+#                                      constraint_squares_left=[square_4])
+#     square_5 = random.choice(square_5s)
+#     c5[len(square_5s)] += 1
+#
+#     square_6s = all_possible_squares(constraint_squares_above=[square_3],
+#                                      constraint_squares_left=[square_4, square_5])
+#     square_6 = random.choice(square_6s)
+#     c6[len(square_6s)] += 1
+#
+#     square_7s = all_possible_squares(constraint_squares_above=[square_1, square_4])
+#     square_7 = random.choice(square_7s)
+#     c7[len(square_7s)] += 1
+#
+#     square_8s = all_possible_squares(constraint_squares_above=[square_2, square_5],
+#                                      constraint_squares_left=[square_7])
+#
+#     n_8 = 0
+#     for square_8 in square_8s:
+#
+#         square_9s = all_possible_squares(constraint_squares_above=[square_3, square_6],
+#                                          constraint_squares_left=[square_7, square_8])
+#         if square_9s:
+#             n_8 += 1
+#             assert len(square_9s) == 1
+#
+# # print('c1', c1)
+# # print('c2', c2)
+# print('c3', c3)
+# # print('c4', c4)
+# print('c5', c5)
+# print('c6', c6)
+# print('c7', c7)
+# print('c8', c8)
+# print('c9', c9)
